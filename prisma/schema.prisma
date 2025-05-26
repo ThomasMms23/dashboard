@@ -1,0 +1,80 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+}
+
+// Modèles gérés par NextAuth.js
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String     @id @default(cuid())
+  name          String?
+  email         String?    @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+  soldItems     SoldItem[] // Relation vers les articles vendus
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// Notre modèle métier
+model SoldItem {
+  id              String    @id @default(cuid())
+  name            String    // Nom de l'article
+  category        String    // Catégorie (ex: Vêtements, Chaussures)
+  brand           String?   // Marque (optionnel)
+  size            String?   // Taille (optionnel)
+  purchasePrice   Float     // Prix d'achat initial
+  purchaseDate    DateTime? // Date d'achat (optionnel)
+  listDate        DateTime  // Date de mise en vente
+  saleDate        DateTime  // Date de vente
+  salePrice       Float     // Prix de vente
+  vintedFees      Float     // Frais Vinted
+  shippingCost    Float     // Coût de l'envoi (payé par le vendeur ou l'acheteur ?) - Précisons que c'est le coût supporté par le vendeur.
+  profit          Float     // Bénéfice (calculé)
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Lien vers l'utilisateur propriétaire
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId]) // Index pour des requêtes plus rapides
+}
